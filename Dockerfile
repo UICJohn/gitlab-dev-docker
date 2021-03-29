@@ -24,12 +24,26 @@ RUN usermod -s /bin/bash ubuntu
 
 RUN echo "ubuntu ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/ubuntu_no_password
 
-# RUN echo "dash dash/sh boolean false" | debconf-set-selections \
-#     && DEBIAN_FRONTEND=noninteractive dpkg-reconfigure dash
-
 USER ubuntu
 
 WORKDIR /home/ubuntu
+
+# Install asdf, plugins and correct versions
+ENV PATH="/home/ubuntu/.asdf/shims:/home/ubuntu/.asdf/bin:${PATH}"
+
+COPY --chown=ubuntu .tool-versions .
+
+RUN git clone https://github.com/asdf-vm/asdf.git /home/ubuntu/.asdf --branch v0.8.0 && \
+  for plugin in $(grep -v '#' .tool-versions | cut -f1 -d" "); do \
+  echo "Installing asdf plugin '$plugin' and install current version" ; \
+  asdf plugin add $plugin; \
+  NODEJS_CHECK_SIGNATURES=no asdf install ; done \
+  && gem install bundler -v '= 1.17.3' \
+  && gem install gitlab-development-kit \
+  # simple tests that tools work
+  && bash -lec "asdf version; yarn --version; node --version; ruby --version" \
+  # clear tmp caches e.g. from postgres compilation
+  && rm -rf /tmp/*
 
 RUN git clone https://gitlab.com/gitlab-org/gitlab-development-kit.git
 
@@ -43,8 +57,26 @@ COPY --chown=ubuntu gdk.yml .
 
 ADD --chown=ubuntu gitlab /home/ubuntu/gitlab-development-kit/gitlab
 
-RUN gdk install
+#Change version if mimemagic issue solved
+RUN cd gitlab \
+    && git checkout dependency/13.5.7-ee
 
-RUN gdk start
+#Mirroring
+RUN yarn config set registry http://registry.npm.bilibili.co
+
+RUN bundle config 'mirror.https://rubygems.org' 'https://mirrors.tuna.tsinghua.edu.cn/rubygems/'
+
+RUN echo "export GOPROXY=http://goproxy.bilibili.co" > ~/.bashrc
+
+RUN gem sources --remove https://rubygems.org/ \
+  && gem sources -a https://mirrors.tuna.tsinghua.edu.cn/rubygems/
+
+RUN mkdir ~/.pip && \
+    touch pip.conf && \
+    echo "[global] \nindex-url=https://mirrors.aliyun.com/pypi/simple/ \n[install] \ntrusted-host=mirrors.aliyun.com" > ~/.pip/pip.conf
+
+#Start installing
+RUN gdk install \
+    && gdk start
 
 CMD gdk tail
