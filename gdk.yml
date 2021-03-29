@@ -1,0 +1,10 @@
+listen_address: 0.0.0.0
+repositories:
+  gitaly: https://gitlab.com/gitlab-org/gitaly.git
+  gitlab: https://git.bilibili.co/ops/gitlab/gitlab-org/gitlab.git
+  gitlab_docs: https://gitlab.com/gitlab-com/gitlab-docs.git
+  gitlab_elasticsearch_indexer: https://gitlab.com/gitlab-org/gitlab-elasticsearch-indexer.git
+  gitlab_k8s_agent: https://gitlab.com/gitlab-org/cluster-integration/gitlab-agent.git
+  gitlab_pages: https://gitlab.com/gitlab-org/gitlab-pages.git
+  gitlab_shell: https://gitlab.com/gitlab-org/gitlab-shell.git
+  gitlab_ui: https://gitlab.com/gitlab-org/gitlab-ui.git

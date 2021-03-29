@@ -1,39 +1,50 @@
 FROM ubuntu:20.04
 
+EXPOSE 3000
+
 RUN mv /etc/apt/sources.list /etc/apt/sources.list.bk \
 	&& touch /etc/apt/sources.list \
-	&& echo  "deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu/ focal main restricted universe multivers \n deb-src http://mirrors.tuna.tsinghua.edu.cn/ubuntu/ focal main restricted universe multivers \n deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu/ focal-updates main restricted universe multivers \n deb-src http://mirrors.tuna.tsinghua.edu.cn/ubuntu/ focal-updates main restricted universe multivers \n deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu/ focal-backports main restricted universe multivers \n deb-src http://mirrors.tuna.tsinghua.edu.cn/ubuntu/ focal-backports main restricted universe multivers \n deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu/ focal-security main restricted universe multivers \n deb-src http://mirrors.tuna.tsinghua.edu.cn/ubuntu/ focal-security main restricted universe multiverse" >> /etc/apt/sources.list
+	&& echo   "deb http://mirrors.aliyun.com/ubuntu/ focal main restricted universe multiverse \n deb-src http://mirrors.aliyun.com/ubuntu/ focal main restricted universe multiverse \n deb http://mirrors.aliyun.com/ubuntu/ focal-security main restricted universe multiverse \n deb-src http://mirrors.aliyun.com/ubuntu/ focal-security main restricted universe multiverse \n deb http://mirrors.aliyun.com/ubuntu/ focal-updates main restricted universe multiverse \n deb-src http://mirrors.aliyun.com/ubuntu/ focal-updates main restricted universe multiverse \n deb http://mirrors.aliyun.com/ubuntu/ focal-backports main restricted universe multiverse \n deb-src http://mirrors.aliyun.com/ubuntu/ focal-backports main restricted universe multiverse \n deb http://mirrors.aliyun.com/ubuntu/ focal-proposed main restricted universe multiverse \n deb-src http://mirrors.aliyun.com/ubuntu/ focal-proposed main restricted universe multiverse" >> /etc/apt/sources.list
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install packages
 COPY packages.txt /
-RUN apt-get update && apt-get install -y gnupg software-properties-common \
+
+# Install packages
+RUN apt-get update && apt-get install -y gnupg git cmake curl software-properties-common \
+    && add-apt-repository ppa:git-core/ppa -y \
     && apt-get install -y $(sed -e 's/#.*//' /packages.txt) \
     && apt-get purge software-properties-common -y \
     && apt-get autoremove -y \
     && rm -rf /tmp/*
 
-RUN useradd --user-group --create-home --groups sudo gdk
+RUN useradd --user-group --create-home --groups sudo ubuntu
 
-RUN echo "gdk ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/gdk_no_password
+RUN usermod -s /bin/bash ubuntu
 
-WORKDIR /home/gdk
+RUN echo "ubuntu ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/ubuntu_no_password
 
-USER gdk
+# RUN echo "dash dash/sh boolean false" | debconf-set-selections \
+#     && DEBIAN_FRONTEND=noninteractive dpkg-reconfigure dash
 
-ENV PATH="/home/gdk/.asdf/shims:/home/gdk/.asdf/bin:${PATH}"
+USER ubuntu
 
-COPY --chown=gdk .tool-versions .
-
-RUN git clone https://github.com/asdf-vm/asdf.git /home/gdk/.asdf --branch v0.8.0 && \
-  for plugin in $(grep -v '#' .tool-versions | cut -f1 -d" "); do \
-  echo "Installing asdf plugin '$plugin' and install current version" ; \
-  asdf plugin add $plugin; \
-  NODEJS_CHECK_SIGNATURES=no asdf install ; done \
-  # simple tests that tools work
-  && bash -lec "asdf version; yarn --version; node --version; ruby --version" \
-  # clear tmp caches e.g. from postgres compilation
-  && rm -rf /tmp/*
+WORKDIR /home/ubuntu
 
 RUN git clone https://gitlab.com/gitlab-org/gitlab-development-kit.git
+
+WORKDIR /home/ubuntu/gitlab-development-kit
+
+RUN git checkout v0.2.9
+
+RUN make bootstrap
+
+COPY --chown=ubuntu gdk.yml .
+
+ADD --chown=ubuntu gitlab /home/ubuntu/gitlab-development-kit/gitlab
+
+RUN gdk install
+
+RUN gdk start
+
+CMD gdk tail

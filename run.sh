@@ -1,0 +1,1 @@
+docker run -d -p 3000:3000 -v gitlab:/home/ubuntu/gitlab-development-kit/gitlab hub.bilibili.co/gitlab/gitlab-dev:latest
