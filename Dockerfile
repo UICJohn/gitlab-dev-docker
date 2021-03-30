@@ -11,7 +11,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 COPY packages.txt /
 
 # Install packages
-RUN apt-get update && apt-get install -y gnupg git cmake curl software-properties-common \
+RUN apt-get update && apt-get install -y gnupg git cmake curl libgpgme-dev software-properties-common \
     && add-apt-repository ppa:git-core/ppa -y \
     && apt-get install -y $(sed -e 's/#.*//' /packages.txt) \
     && apt-get purge software-properties-common -y \
@@ -78,5 +78,7 @@ RUN mkdir ~/.pip && \
 #Start installing
 RUN gdk install \
     && gdk start
+
+RUN sudo rm -r gitlab
 
 CMD gdk tail
