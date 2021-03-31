@@ -1,5 +1,7 @@
 cd ~/gitlab-development-kit
 
-yarn install
+make bootstrap
+
+gdk install
 
 gdk start
